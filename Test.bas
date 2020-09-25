@@ -44,7 +44,7 @@ Public Sub Test_Something()
     Set olA = New Outlook.Application
     Set olNS = olA.GetNamespace("MAPI")
     
-    For Each mail In Application.ActiveExplorer.Selection
+    For Each mail In Application.ActiveExplorer.selection
     
         For rec = 1 To mail.Recipients.count
             If (mail.Recipients.Item(rec).Type = 1) Then

@@ -21,3 +21,21 @@ Public Function StartsWith(str As String, start As String) As Boolean
      StartsWith = (Left(Trim(UCase(str)), startLen) = UCase(start))
 End Function
 
+
+'--------------------------------------------------------------------
+' Prüfe ob ein String mit einem bestimmten anderen String beginnt
+'--------------------------------------------------------------------
+Public Function FirstInStr(str As String, chars As String) As Long
+    Dim index As Long
+    Dim c As Integer
+    
+    FirstInStr = 0
+    
+    For c = 1 To Len(chars)
+        index = InStr(str, Mid(chars, c, 1))
+        'Debug.Print Mid(chars, c, 1) & " @ " & index
+        If index <> 0 And (index < FirstInStr Or FirstInStr = 0) Then
+            FirstInStr = index
+        End If
+    Next
+End Function

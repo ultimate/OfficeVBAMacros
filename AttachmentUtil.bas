@@ -114,7 +114,7 @@ Public Sub ArchiveAttachmentsForSelectedMails()
     sizeBefore = 0
     sizeAfter = 0
     
-    For Each mail In Application.ActiveExplorer.Selection
+    For Each mail In Application.ActiveExplorer.selection
         sizeBefore = sizeBefore + mail.Size
         archivedAttachments = ArchiveAttachments(mail, opt = OPTION_WITH_DELETE)
         totalArchivedAttachments = totalArchivedAttachments + archivedAttachments
@@ -183,7 +183,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
         Dim offset As Integer: offset = 0
         Dim counter As Integer
         Dim i As Integer
-        Dim text As String
+        Dim Text As String
         Dim imgToSmall As Boolean
             
         ' RTF-Word-Editor
@@ -286,18 +286,18 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                     startIndex = InStr(mail.HTMLBody, "src=""cid:" & attachmentUpdates(i).attachmentName & "@")
                     If (startIndex <> 0) Then
                         ' HTML-Tag gefunden
-                        text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
+                        Text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
                         ' --> Link an entsprechender Stelle einfügen
                         startIndex = InStrRev(mail.HTMLBody, "<img", startIndex)
                         endIndex = InStr(startIndex, mail.HTMLBody, """>")
                         htmlTag = Left(Right(mail.HTMLBody, Len(mail.HTMLBody) - startIndex + 1), endIndex - startIndex + 2)
-                        mail.HTMLBody = Replace(mail.HTMLBody, htmlTag, "<i>" & text & "</i>")
+                        mail.HTMLBody = Replace(mail.HTMLBody, htmlTag, "<i>" & Text & "</i>")
                         countImg = countImg + 1
                     Else
                         ' Kein HTML-Tag vorhanden
-                        text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
+                        Text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
                         ' --> Link wird am Anfang eingefügt
-                        msgUpdate = msgUpdate & text & vbCrLf
+                        msgUpdate = msgUpdate & Text & vbCrLf
                         countAtt = countAtt + 1
                     End If
                 Next i
@@ -313,15 +313,15 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 End If
                                 
                 For i = 0 To archivedAttachments - 1
-                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
+                    Text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                     position = attachmentUpdates(i).position + offset - 1
                     
-                    mailEditor.Characters(position).InsertAfter (text)
+                    mailEditor.Characters(position).InsertAfter (Text)
                     ' Text kursiv machen
-                    mailEditor.Range(position, position + Len(text)).Italic = True
+                    mailEditor.Range(position, position + Len(Text)).Italic = True
                     ' Ich weiss nicht genau warum, aber da ist ein offset in der Position drin, der sich von Anhang zu Anhang aufsummiert
                     ' Und dann noch den neu eingefügten Link berücksichtigen
-                    offset = offset - 31 + Len(text)
+                    offset = offset - 31 + Len(Text)
                 Next i
                 
                 ' Editor aktivieren, damit Änderungen korrekt gespeichert werden
@@ -331,10 +331,10 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 msgUpdate = ""
                 maxLength = 0
                 For i = 0 To archivedAttachments - 1
-                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
-                    msgUpdate = msgUpdate & text & vbCrLf
-                    If (Len(text) > maxLength) Then
-                        maxLength = Len(text)
+                    Text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
+                    msgUpdate = msgUpdate & Text & vbCrLf
+                    If (Len(Text) > maxLength) Then
+                        maxLength = Len(Text)
                     End If
                 Next i
                 mail.Body = msgUpdate & vbCrLf & String(maxLength * 1.5, "-") & vbCrLf & vbCrLf & mail.Body
@@ -365,7 +365,7 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
         Dim offset As Integer: offset = 0
         Dim counter As Integer
         Dim i As Integer
-        Dim text As String
+        Dim Text As String
         Dim w As Integer
         Dim h As Integer
         Dim estimatedSize As Long
@@ -451,13 +451,13 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
             Dim countOLE As Integer: countOLE = 1
             offset = 0
             For i = archivedOLEs - 1 To 0 Step -1
-                text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
+                Text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                 position = attachmentUpdates(i).position + offset - 1
                 
-                attachmentUpdates(i).shapeItem.Range.InsertAfter (text)
+                attachmentUpdates(i).shapeItem.Range.InsertAfter (Text)
                 position = attachmentUpdates(i).shapeItem.Range.End
                 ' Text kursiv machen
-                mailEditor.Range(position, position + Len(text)).Italic = True
+                mailEditor.Range(position, position + Len(Text)).Italic = True
                 ' Shape entfernen
                 attachmentUpdates(i).shapeItem.Delete
             Next i
