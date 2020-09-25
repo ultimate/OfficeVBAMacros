@@ -34,6 +34,30 @@ Public Sub ShowCatDialog2()
 End Sub
 
 '--------------------------------------------------
+' Zeige den Kategorie-Auswahl-Dialog an
+' (Verwende diese Funktion, wenn eine oder mehrere Mails in einem Ordner selektiert sind
+' und/oder im Lesebereich angezeigt werden)
+'--------------------------------------------------
+Public Sub CategorizeConversations()
+    Dim item
+    Dim cats As String
+    Dim conv As Conversation
+    Dim convMail As MailItem
+    Dim convMeeting As MeetingItem
+    
+    For Each item In Application.ActiveExplorer.selection
+        Set conv = item.GetConversation
+        If Not IsNull(conv) Then
+            ' get categories
+            cats = GetCategories(conv)
+            Debug.Print "setting categories to: "; cats
+            ' apply categories
+            Call SetCategories(cats, conv)
+        End If
+    Next item
+End Sub
+
+'--------------------------------------------------
 ' Verschlüsselung entfernen
 ' (Verwende diese Funktion, wenn eine oder mehrere Mails in einem Ordner selektiert sind
 ' und/oder im Lesebereich angezeigt werden)
