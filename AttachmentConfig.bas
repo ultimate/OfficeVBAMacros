@@ -29,26 +29,21 @@ Public Const DATE_FORMAT As String = "yyyy.mm.dd Hh.Nn.Ss"
 ' Text-Bausteine für %DIRECTION
 Public Const DIRECTION_FROM As String = "von"
 Public Const DIRECTION_TO As String = "an"
-' Sollen Leerzeichen im Dateinamen ersetzt werden
+' Sollen Leerzeichen im original Dateinamen ersetzt werden
 ' (Leerzeichem im Pfad zum Archiv-Ordner werden selbstverständlich nicht ersetzt)
 Public Const REPLACE_SPACES As Boolean = False
-' Minimale Dateigröße zum Archivieren in Bytes (verwende *1024 für KB; *1024*1024 für MB, etc.)
-Public Const MIN_FILE_SIZE As Integer = 4500
-' Soll eine Bestätigung/Zusammenfassung angezeigt werden?
+' Minimale Größe zum Archivieren in Bytes (verwende *1024 für KB; *1024*1024 für MB, etc.)
+'   MIN_FILE_SIZE = Mindestgröße für "normale" Dateien
+'   MIN_IMAGE_SIZE = Mindestgröße für eingebettete Bilder
+Public Const MIN_FILE_SIZE As Integer = 0
+Public Const MIN_IMAGE_SIZE As Integer = 0
+' Soll eine Bestätigung/Zusammenfassung/Überschreiben-Dialog angezeigt werden?
 Public Const SHOW_CONFIRM As Boolean = True
 Public Const SHOW_SUMMARY As Boolean = True
+Public Const SHOW_OVERWRITE As Boolean = True
 ' Sollen Anhänge entfernt werden?
 ' Option wird genutzt, wenn kein Bestätigungs-Dialog angezeigt werden soll
 Public Const DELETE_ATTACHMENTS As Boolean = True
-' Anzeige-Messages
-Public Const MSG_CONFIRM As String = "Anhänge archivieren und entfernen?" & vbCrLf _
-                            & "  Ja = Archivieren und Entfernen" & vbCrLf _
-                            & "  Nein = Archivieren OHNE Entfernen" & vbCrLf _
-                            & "  Abbrechen = Keine Aktion durchführen"
-Public Const MSG_ARCHIVED_0 As String = "Keine Anhänge zum archivieren vorhanden"
-Public Const MSG_ARCHIVED_1 As String = " Anhang erfolgreich archiviert"
-Public Const MSG_ARCHIVED_N As String = " Anhänge erfolgreich archiviert"
-Public Const MSG_MAILS_0 As String = "Keine Mails ausgewählt"
-Public Const MSG_MAILS_OF As String = " von "
-Public Const MSG_MAILS_N As String = " ausgewählten Mails enthielten Anhänge"
-Public Const MSG_IN_MAIL_TEXT As String = "Anhang %I entfernt und archivert unter: "
+' Sollen vorhandene Dateien überschrieben werden?
+' Option wird genutzt, wenn kein Überschreiben-Dialog angezeigt werden soll
+Public Const OVERWRITE_EXISTING_FILES As Boolean = True

@@ -1,14 +1,10 @@
 VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
-  Persistable = 0  'NotPersistable
-  DataBindingBehavior = 0  'vbNone
-  DataSourceBehavior  = 0  'vbNone
-  MTSTransactionMode  = 0  'NotAnMTSObject
 END
 Attribute VB_Name = "PicSave"
 Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
+Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
@@ -161,7 +157,7 @@ Dim fmtGIF, fmtJPEG, fmtPNG
 
 Public Sub SavePicture( _
     ByVal StdPicture As StdPicture, _
-    ByVal FileName As String, _
+    ByVal fileName As String, _
     ByVal Format As SavePictureFormats, _
     Optional ByVal JpegQualityPct As Long = 70)
 
@@ -183,7 +179,7 @@ Public Sub SavePicture( _
                   TypeName(Me), _
                   "GdipCreateBitmapFromHBITMAP error " & CStr(HRESULT)
     End If
-    HRESULT = SHCreateStreamOnFile(StrPtr(FileName), _
+    HRESULT = SHCreateStreamOnFile(StrPtr(fileName), _
                                    STGM_CREATE Or STGM_WRITE Or STGM_SHARE_EXCLUSIVE, _
                                    Stream)
     If HRESULT <> S_OK Then
@@ -193,7 +189,7 @@ Public Sub SavePicture( _
                   "SHCreateStreamOnFile error " & CStr(HRESULT)
     End If
     Set Stream = Nothing 'Force creation on 64-bit Windows.
-    HRESULT = SHCreateStreamOnFile(StrPtr(FileName), _
+    HRESULT = SHCreateStreamOnFile(StrPtr(fileName), _
                                    STGM_CREATE Or STGM_WRITE Or STGM_SHARE_EXCLUSIVE, _
                                    Stream)
     If HRESULT <> S_OK Then

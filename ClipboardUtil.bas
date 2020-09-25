@@ -49,7 +49,7 @@ End Type
         Size As Long
         Type As Long
             hPic As LongPtr
-            hPal As LongPtr
+            hpal As LongPtr
         End Type
          
          
@@ -89,7 +89,7 @@ End Type
             Size As Long
             Type As Long
                 hPic As Long
-                hPal As Long
+                hpal As Long
             End Type
              
              
@@ -167,7 +167,7 @@ End Type
              
              
              'Some pointers
-            Dim H As Long, hPicAvail As Long, hPtr As LongPtr, hPal As LongPtr, lPicType As Long, hCopy As LongPtr
+            Dim h As Long, hPicAvail As Long, hPtr As LongPtr, hpal As LongPtr, lPicType As Long, hCopy As LongPtr
              
              'Convert the type of picture requested from the xl constant to the API constant
             lPicType = IIf(lXlPicType = xlBitmap, CF_BITMAP, CF_ENHMETAFILE)
@@ -177,9 +177,9 @@ End Type
              
             If hPicAvail <> 0 Then
                  'Get access to the clipboard
-                H = OpenClipboard(0&)
+                h = OpenClipboard(0&)
                  
-                If H > 0 Then
+                If h > 0 Then
                      'Get a handle to the image data
                     hPtr = GetClipboardData(lPicType)
                      
@@ -191,7 +191,7 @@ End Type
                     End If
                      
                      'Release the clipboard to other programs
-                    H = CloseClipboard
+                    h = CloseClipboard
                      
                      'If we got a handle to the image, convert it into a Picture object and return it
                     If hPtr <> 0 Then Set PastePictureVBA7 = CreatePictureVBA7(hCopy, 0, lPicType)
@@ -206,7 +206,7 @@ End Type
              
              
              'Some pointers
-            Dim H As Long, hPicAvail As Long, hPtr As Long, hPal As Long, lPicType As Long, hCopy As Long
+            Dim h As Long, hPicAvail As Long, hPtr As Long, hpal As Long, lPicType As Long, hCopy As Long
              
              'Convert the type of picture requested from the xl constant to the API constant
             lPicType = IIf(lXlPicType = xlBitmap, CF_BITMAP, CF_ENHMETAFILE)
@@ -216,9 +216,9 @@ End Type
              
             If hPicAvail <> 0 Then
                  'Get access to the clipboard
-                H = OpenClipboard(0&)
+                h = OpenClipboard(0&)
                  
-                If H > 0 Then
+                If h > 0 Then
                      'Get a handle to the image data
                     hPtr = GetClipboardData(lPicType)
                      
@@ -230,7 +230,7 @@ End Type
                     End If
                      
                      'Release the clipboard to other programs
-                    H = CloseClipboard
+                    h = CloseClipboard
                      
                      'If we got a handle to the image, convert it into a Picture object and return it
                     If hPtr <> 0 Then Set PastePictureWin32 = CreatePicture(hCopy, 0, lPicType)
@@ -256,7 +256,7 @@ End Type
          ''' --------------------------------------------------------------------------
          ''' 30 Oct 98  Stephen Bullen      Created
          '''
-        Private Function CreatePictureVBA7(ByVal hPic As LongPtr, ByVal hPal As LongPtr, ByVal lPicType) As IPicture
+        Private Function CreatePictureVBA7(ByVal hPic As LongPtr, ByVal hpal As LongPtr, ByVal lPicType) As IPicture
              
              
              ' IPicture requires a reference to "OLE Automation"
@@ -289,7 +289,7 @@ End Type
                 .Size = Len(uPicInfo) ' Length of structure.
                 .Type = IIf(lPicType = CF_BITMAP, PICTYPE_BITMAP, PICTYPE_ENHMETAFILE) ' Type of Picture
                 .hPic = hPic ' Handle to image.
-                .hPal = IIf(lPicType = CF_BITMAP, hPal, 0) ' Handle to palette (if bitmap).
+                .hpal = IIf(lPicType = CF_BITMAP, hpal, 0) ' Handle to palette (if bitmap).
             End With
              
              ' Create the Picture object.
@@ -307,7 +307,7 @@ End Type
         End Function
          
          
-        Private Function CreatePicture(ByVal hPic As Long, ByVal hPal As Long, ByVal lPicType) As IPicture
+        Private Function CreatePicture(ByVal hPic As Long, ByVal hpal As Long, ByVal lPicType) As IPicture
              
              
              ' IPicture requires a reference to "OLE Automation"
@@ -340,7 +340,7 @@ End Type
                 .Size = Len(uPicInfo) ' Length of structure.
                 .Type = IIf(lPicType = CF_BITMAP, PICTYPE_BITMAP, PICTYPE_ENHMETAFILE) ' Type of Picture
                 .hPic = hPic ' Handle to image.
-                .hPal = IIf(lPicType = CF_BITMAP, hPal, 0) ' Handle to palette (if bitmap).
+                .hpal = IIf(lPicType = CF_BITMAP, hpal, 0) ' Handle to palette (if bitmap).
             End With
              
              
