@@ -23,7 +23,11 @@ End Function
 
 
 '--------------------------------------------------------------------
-' Prüfe ob ein String mit einem bestimmten anderen String beginnt
+' Finde das erste Zeichen aus einer Auswahl aus Zeichen in einem String
+' und gibt dessen Index zurück
+' z. B. StringUtil.FirstInStr("Was wäre, wenn...?", ".,?")  => 9
+'       StringUtil.FirstInStr("Was wäre, wenn...?", ".?")   => 15
+'       StringUtil.FirstInStr("Was wäre, wenn...?", "?")    => 18
 '--------------------------------------------------------------------
 Public Function FirstInStr(str As String, chars As String) As Long
     Dim index As Long

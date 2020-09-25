@@ -12,6 +12,7 @@ Public Sub Test_Attachment_Config_And_Kuerzels()
     Debug.Print "  DIRECTION_TO       >" & AttachmentConfig.DIRECTION_TO
 End Sub
 
+
 '--------------------------------------------------
 ' Test-String-Funktionen
 '--------------------------------------------------
@@ -29,6 +30,13 @@ Public Sub Test_String_StartsWith_EndsWith()
     Debug.Print StringUtil.EndsWith("abcd", "d")
     Debug.Print StringUtil.EndsWith("abcd", "ab")
     Debug.Print StringUtil.EndsWith("abcd", "cd")
+    
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", ".,?")
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", ",.?")
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", "?.,")
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", "?.")
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", ".?")
+    Debug.Print StringUtil.FirstInStr("Was wäre, wenn...?", "?")
 End Sub
 
 Public Sub Test_Something()
@@ -47,7 +55,7 @@ Public Sub Test_Something()
     For Each mail In Application.ActiveExplorer.selection
     
         For rec = 1 To mail.Recipients.count
-            If (mail.Recipients.Item(rec).Type = 1) Then
+            If (mail.Recipients.Item(rec).type = 1) Then
                 
                 address = GetAddress(mail.Recipients.Item(rec).addressEntry)
                 name = GetName(mail.Recipients.Item(rec).addressEntry)
@@ -58,4 +66,49 @@ Public Sub Test_Something()
         Next
     Next mail
 
+End Sub
+
+Public Sub Test_Cert()
+    Dim url1 As String
+    Dim url2 As String
+    Dim request As MSXML2.XMLHTTP60
+    Dim result As String
+    
+    url1 = "https://server1.com/login"
+    url2 = "https://server1.com/sjira/rest/api/latest/issue/XX-1188"
+    
+    Set request = New MSXML2.XMLHTTP60
+    Call request.Open("POST", url1, False)
+    Call request.Send("login-form-type=cert")
+    result = request.responseText
+    
+    Debug.Print result
+    
+    Set request = New MSXML2.XMLHTTP60
+    Call request.Open("GET", url2, False)
+    Call request.Send
+    result = request.responseText
+    
+    Debug.Print result
+End Sub
+
+Public Sub Test_LoginForm()
+    Dim username As String
+    Dim password As String
+    
+    LoginForm.UrlLabel = "http://www.example.com"
+    
+    LoginForm.Show (vbModal)
+    
+    If (LoginForm.okAction) Then
+        username = LoginForm.username
+        password = LoginForm.password
+        Debug.Print "confirmed " & username & ":" & password
+    Else
+        username = LoginForm.username
+        password = LoginForm.password
+        Debug.Print "canceled " & username & ":" & password
+    End If
+    
+    LoginForm.Reset (False)
 End Sub

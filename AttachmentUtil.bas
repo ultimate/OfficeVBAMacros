@@ -306,6 +306,10 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 mail.HTMLBody = Left(mail.HTMLBody, startIndex) & "<p><i>" & msgUpdate & "</i></p><hr/><br/>" & Right(mail.HTMLBody, Len(mail.HTMLBody) - startIndex)
             ElseIf mail.BodyFormat = olFormatRichText Then
                 Debug.Print "  Aktualisiere RTF-Inhalt"
+                
+                ' Anhänge nach Position sortieren
+                ' (es kann vorkommen, dass diese oben nicht in der richtigen Reihenfolge durchgegangen werden)
+                Call SortAttachmentUpdates(attachmentUpdates, archivedAttachments)
                                 
                 mailProtection = mailEditor.ProtectionType
                 If (mailProtection <> wdNoProtection) Then
@@ -313,10 +317,24 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 End If
                                 
                 For i = 0 To archivedAttachments - 1
+                
+                    ' Alternative für rückwärts durchgehen
+                    'Text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", archivedAttachments - i) & """file://" & attachmentUpdates(i).filename & """"
+                    'position = attachmentUpdates(i).position '+ offset - 1
+                
                     Text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                     position = attachmentUpdates(i).position + offset - 1
                     
-                    mailEditor.Characters(position).InsertAfter (Text)
+                    If (position = 0) Then
+                        mailEditor.Content.InsertBefore (Text)
+                    ElseIf (position >= mailEditor.Characters.count) Then
+                        position = mailEditor.Characters.count
+                        mailEditor.Content.InsertAfter (Text)
+                    Else
+                        mailEditor.Range(position, position).InsertAfter (Text)
+                        'mailEditor.Characters(position).InsertAfter (Text) ' scheint manchmal nicht zu stimmen
+                    End If
+                    
                     ' Text kursiv machen
                     mailEditor.Range(position, position + Len(Text)).Italic = True
                     ' Ich weiss nicht genau warum, aber da ist ein offset in der Position drin, der sich von Anhang zu Anhang aufsummiert
@@ -601,6 +619,56 @@ Public Function GetName(addressEntry As addressEntry) As String
     End If
 End Function
 
+'--------------------------------------------------
+' Sortiere die zu ersetzenden Attachments anhand ihrer Position im Text, damit das Ersetzen korrekt funktioniert.
+' (Bubble-Sort reicht, da die Listen i.d.R. nicht lang sind!
+'--------------------------------------------------
+Private Sub SortAttachmentUpdates(ByRef attachmentUpdates() As AttachmentUpdate, count As Integer, Optional ascending As Boolean = True)
+    Dim tmp As AttachmentUpdate
+    Dim i As Integer
+    Dim j As Integer
+    
+    For i = 0 To count - 1
+        Debug.Print (i & ": " & attachmentUpdates(i).position)
+        Debug.Print (i & ": " & attachmentUpdates(i).attachmentName)
+        Debug.Print (i & ": " & attachmentUpdates(i).filename)
+        'Debug.Print (i & ": " & attachmentUpdates(i).shapeItem.AlternativeText)
+        'Debug.Print (i & ": " & attachmentUpdates(i).attachmentItem.DisplayName)
+    Next
+    
+    For j = count - 2 To 0 Step -1
+        ' Alle links davon liegenden Zeichen auf richtige Sortierung
+        ' der jeweiligen Nachfolger überprüfen:
+        For i = 0 To j
+            ' Ist das aktuelle Element seinem Nachfolger gegenüber korrekt sortiert?
+            If (ascending) Then
+                If attachmentUpdates(i).position > attachmentUpdates(i + 1).position Then
+                    ' Element und seinen Nachfolger vertauschen.
+                    
+                    tmp = attachmentUpdates(i)
+                    attachmentUpdates(i) = attachmentUpdates(i + 1)
+                    attachmentUpdates(i + 1) = tmp
+                End If
+            Else
+                If attachmentUpdates(i).position < attachmentUpdates(i + 1).position Then
+                    ' Element und seinen Nachfolger vertauschen.
+                    
+                    tmp = attachmentUpdates(i)
+                    attachmentUpdates(i) = attachmentUpdates(i + 1)
+                    attachmentUpdates(i + 1) = tmp
+                End If
+            End If
+        Next i
+    Next j
+    
+    For i = 0 To count - 1
+        Debug.Print (i & ": " & attachmentUpdates(i).position)
+        Debug.Print (i & ": " & attachmentUpdates(i).attachmentName)
+        Debug.Print (i & ": " & attachmentUpdates(i).filename)
+        'Debug.Print (i & ": " & attachmentUpdates(i).shapeItem.AlternativeText)
+        'Debug.Print (i & ": " & attachmentUpdates(i).attachmentItem.DisplayName)
+    Next
+End Sub
 
 '--------------------------------------------------
 ' Zeige den Zusammenfassungsdialog
@@ -714,3 +782,34 @@ Private Function ShowNoKuerzel(filename As String) As Boolean
     End If
 End Function
 
+'--------------------------------------------------
+' Test-Attachment Bubble Sort
+'--------------------------------------------------
+Private Sub Test_Sort_Attachments()
+    Dim count As Integer
+    Dim i As Integer
+    
+    count = 10
+    
+    Dim attachmentUpdates() As AttachmentUpdate
+    ReDim attachmentUpdates(count)
+    
+    Randomize 'Initializes the random number generator
+    
+    For i = 0 To count - 1
+        attachmentUpdates(i).position = Int(1000 * Rnd)
+        attachmentUpdates(i).filename = attachmentUpdates(i).position & ".att"
+    Next
+    
+    Call SortAttachmentUpdates(attachmentUpdates, count)
+    
+    For i = 0 To count - 1
+        Debug.Print (i & ": " & attachmentUpdates(i).position & " " & attachmentUpdates(i).filename)
+    Next
+    
+    Call SortAttachmentUpdates(attachmentUpdates, count, False)
+    
+    For i = 0 To count - 1
+        Debug.Print (i & ": " & attachmentUpdates(i).position & " " & attachmentUpdates(i).filename)
+    Next
+End Sub
