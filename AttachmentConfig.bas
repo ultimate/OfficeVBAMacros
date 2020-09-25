@@ -33,14 +33,16 @@ Public Const DIRECTION_TO As String = "an"
 ' (Leerzeichem im Pfad zum Archiv-Ordner werden selbstverständlich nicht ersetzt)
 Public Const REPLACE_SPACES As Boolean = False
 ' Minimale Größe zum Archivieren in Bytes (verwende *1024 für KB; *1024*1024 für MB, etc.)
+'   MIN_MAIL_SIZE = Mindestgröße für die Gesamte E-Mail ab der archiviert wird
 '   MIN_FILE_SIZE = Mindestgröße für "normale" Dateien
 '   MIN_IMAGE_SIZE = Mindestgröße für eingebettete Bilder
+Public Const MIN_MAIL_SIZE As Integer = 0
 Public Const MIN_FILE_SIZE As Integer = 0
 Public Const MIN_IMAGE_SIZE As Integer = 0
 ' Soll eine Bestätigung/Zusammenfassung/Überschreiben-Dialog angezeigt werden?
 Public Const SHOW_CONFIRM As Boolean = True
 Public Const SHOW_SUMMARY As Boolean = True
-Public Const SHOW_OVERWRITE As Boolean = True
+Public Const SHOW_OVERWRITE As Boolean = False
 ' Sollen Anhänge entfernt werden?
 ' Option wird genutzt, wenn kein Bestätigungs-Dialog angezeigt werden soll
 Public Const DELETE_ATTACHMENTS As Boolean = True

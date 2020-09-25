@@ -50,7 +50,7 @@ Public Sub Debug_Attachments()
     Set mail = Application.ActiveInspector.CurrentItem
     
     Debug.Print "size=" & mail.Size
-    Debug.Print "anz=" & mail.Attachments.Count
+    Debug.Print "anz=" & mail.Attachments.count
     
     Dim att As attachment
     For Each att In mail.Attachments
@@ -96,7 +96,7 @@ Public Sub Debug_Attachments()
     Debug.Print Word.WdInlineShapeType.wdInlineShapeLockedCanvas & "=wdInlineShapeLockedCanvas"
     Debug.Print Word.WdInlineShapeType.wdInlineShapeSmartArt & "=wdInlineShapeSmartArt"
     Debug.Print Word.WdInlineShapeType.wdInlineShapeWebVideo & "=wdInlineShapeWebVideo"
-    Debug.Print "shapes=" & mailEditor.InlineShapes.Count
+    Debug.Print "shapes=" & mailEditor.InlineShapes.count
                 
     For Each ishp In mailEditor.InlineShapes
         Debug.Print nbr & " type=" & ishp.Type & " alt=" & ishp.AlternativeText
@@ -134,16 +134,10 @@ End Sub
 
 Public Sub Test_Something()
 
-    #If locale = "German" Then
-        Debug.Print "DE"
-    #Else
-        Debug.Print "EN"
-    #End If
-    Debug.Print locale
-
-Dim lang_code As Long
-lang_code = Application.LanguageSettings.LanguageID(msoLanguageIDUI)
-
-    Debug.Print "dir=" & Dir("Y:\Eigene Dateien\_Archiv")
+    Dim mail As MailItem
+    
+    For Each mail In Application.ActiveExplorer.Selection
+        Debug.Print mail.Categories
+    Next mail
 
 End Sub

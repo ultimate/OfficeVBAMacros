@@ -29,7 +29,7 @@ Private Const OPTION_CANCEL As Integer = -1
     Private Const MSG_MAILS_0 As String = "Keine Mails ausgewählt"
     Private Const MSG_MAILS_OF As String = " von "
     Private Const MSG_MAILS_N As String = " ausgewählten Mails enthielten Anhänge"
-    Private Const MSG_SIZE As String = "Gesamtgröße = %SIZE"
+    Private Const MSG_SIZE As String = "Postfach-Speicher freigegeben = ca. "
     Private Const MSG_ATT_IN_MAIL_TEXT As String = "Anhang %I entfernt und archivert unter: "
     Private Const MSG_IMG_IN_MAIL_TEXT As String = "Bild %I entfernt und archivert unter: "
 #Else
@@ -48,7 +48,7 @@ Private Const OPTION_CANCEL As Integer = -1
     Private Const MSG_MAILS_0 As String = "No mail selected"
     Private Const MSG_MAILS_OF As String = " of "
     Private Const MSG_MAILS_N As String = " selected mails contained attachments"
-    Private Const MSG_SIZE As String = "Total size = %SIZE"
+    Private Const MSG_SIZE As String = "Postbox-storage freed = approx. "
     Private Const MSG_ATT_IN_MAIL_TEXT As String = "Attachment %I removed and archived at: "
     Private Const MSG_IMG_IN_MAIL_TEXT As String = "Image %I removed and archived at: "
 #End If
@@ -67,28 +67,24 @@ Private Type AttachmentUpdate
 End Type
 
 '--------------------------------------------------
-' Custom Type für die Rückgabe des Archivierungsergebnisses
-'--------------------------------------------------
-Private Type ArchiveResult
-     archivedAttachments As Integer
-     archivedBytes As Long
-End Type
-
-'--------------------------------------------------
 ' Verwende diese Funktion, wenn eine Mail im separaten Fenster angezeigt wird
 '--------------------------------------------------
 Public Sub ArchiveAttachmentsForCurrentMail()
     Dim mail As MailItem
     Dim archivedAttachments As Integer
+    Dim sizeBefore As Long
+    Dim sizeAfter As Long
     Dim opt As Integer
     
     opt = ShowConfirm
     If (opt = OPTION_CANCEL) Then Exit Sub
     
     Set mail = Application.ActiveInspector.CurrentItem
+    sizeBefore = mail.Size
     archivedAttachments = ArchiveAttachments(mail, opt = OPTION_WITH_DELETE)
+    sizeAfter = mail.Size
     
-    Call ShowSummary(1, 1, archivedAttachments, 0)
+    Call ShowSummary(1, 1, archivedAttachments, sizeBefore - sizeAfter)
 End Sub
 
 '--------------------------------------------------
@@ -101,6 +97,8 @@ Public Sub ArchiveAttachmentsForSelectedMails()
     Dim totalArchivedAttachments As Integer
     Dim archivedMails As Integer
     Dim selectedMails As Integer
+    Dim sizeBefore As Long
+    Dim sizeAfter As Long
     Dim opt As Integer
     
     opt = ShowConfirm
@@ -109,17 +107,21 @@ Public Sub ArchiveAttachmentsForSelectedMails()
     totalArchivedAttachments = 0
     selectedMails = 0
     archivedMails = 0
+    sizeBefore = 0
+    sizeAfter = 0
     
     For Each mail In Application.ActiveExplorer.Selection
+        sizeBefore = sizeBefore + mail.Size
         archivedAttachments = ArchiveAttachments(mail, opt = OPTION_WITH_DELETE)
         totalArchivedAttachments = totalArchivedAttachments + archivedAttachments
         selectedMails = selectedMails + 1
         If (archivedAttachments > 0) Then
             archivedMails = archivedMails + 1
         End If
+        sizeAfter = sizeAfter + mail.Size
     Next mail
     
-    Call ShowSummary(selectedMails, archivedMails, totalArchivedAttachments, 0)
+    Call ShowSummary(selectedMails, archivedMails, totalArchivedAttachments, sizeBefore - sizeAfter)
 End Sub
 
 '--------------------------------------------------
@@ -136,7 +138,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
     Dim position As Integer
     Dim offset As Integer: offset = 0
     Dim archivedAttachments As Integer: archivedAttachments = 0
-    Dim attachmentUpdates() As AttachmentUpdate: ReDim attachmentUpdates(mail.Attachments.Count)
+    Dim attachmentUpdates() As AttachmentUpdate: ReDim attachmentUpdates(mail.Attachments.count)
     Dim counter As Integer
     Dim i As Integer
     Dim text As String
@@ -156,7 +158,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
         Set mailInspector = mail.GetInspector
         Set mailEditor = mailInspector.WordEditor
         Set PicSave = New PicSave
-        ReDim attachmentUpdates(mail.Attachments.Count + mailEditor.InlineShapes.Count)
+        ReDim attachmentUpdates(mail.Attachments.count + mailEditor.InlineShapes.count)
     End If
             
     fileNamePattern = GetFileNamePattern(mail)
@@ -164,7 +166,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
     Debug.Print "Archiviere Anhänge im Pfad -> " & archiveFolder & "\" & fileNamePattern
     Debug.Print "  Anhänge werden entfernt? " & del
         
-    If (mail.Attachments.Count > 0) Then
+    If (mail.Attachments.count > 0) Then
         ' (normale) Anhänge behandeln
         counter = 1
         For Each att In mail.Attachments
@@ -173,6 +175,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                 ' OLE-Bilder müssen separat behandelt werden!
                 ' Speichern der Bilder ist nur über RTF-Word-Editor möglich
                 ' Normales Speichern resultiert in nicht lesbarem Bitmap
+                'Debug.Print "POSITION=" & att.position
             ElseIf (att.Size >= AttachmentConfig.MIN_FILE_SIZE) Then
                 
                 ' Dateiname aus Pattern ermitteln
@@ -196,7 +199,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                 End If
                 
                 If (overwrite) Then
-                    Debug.Print "  Archiviere Anhang " & counter & ": " & att.DisplayName & " (Größe=" & att.Size & ") -> " & fileName
+                    Debug.Print "  Archiviere Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> " & fileName
                 
                     att.SaveAsFile (fileName)
                     
@@ -207,10 +210,10 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                     
                     archivedAttachments = archivedAttachments + 1
                 Else
-                    Debug.Print "  Überspringe Anhang " & counter & ": " & att.DisplayName & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
+                    Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
                 End If
             Else
-                Debug.Print "  Überspringe Anhang " & counter & ": " & att.fileName & " (Größe=" & att.Size & ")"
+                Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ")"
             End If
             counter = counter + 1
         Next att
@@ -228,30 +231,27 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                 attachmentUpdates(i).attachmentItem.Delete
             Next i
             
-            'mail.Save
-            
             If mail.BodyFormat = olFormatHTML Then
                 Debug.Print "  Aktualisiere HTML-Inhalt"
                 msgUpdate = ""
-                Dim countImg As Integer: countImg = 0
-                Dim countAtt As Integer: countAtt = 0
+                Dim countImg As Integer: countImg = 1
+                Dim countAtt As Integer: countAtt = 1
                 For i = 0 To archivedAttachments - 1
                     ' Suche nach HTML TAG für eingebettetes Bild in der Form
                     ' <img width=85 height=76 id="Bild_x0020_1" src="cid:image001.png@01D29976.A64E5DB0">
                     startIndex = InStr(mail.HTMLBody, "src=""cid:" & attachmentUpdates(i).attachmentName & "@")
                     If (startIndex <> 0) Then
                         ' HTML-Tag gefunden
-                        text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg + 1) & "<a href=""" & fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
+                        text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg) & "<a href=""" & attachmentUpdates(i).fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
                         ' --> Link an entsprechender Stelle einfügen
                         startIndex = InStrRev(mail.HTMLBody, "<img", startIndex)
                         endIndex = InStr(startIndex, mail.HTMLBody, """>")
                         htmlTag = Left(Right(mail.HTMLBody, Len(mail.HTMLBody) - startIndex + 1), endIndex - startIndex + 2)
-                        'Debug.Print "    Ersetze " & htmlTag
                         mail.HTMLBody = Replace(mail.HTMLBody, htmlTag, "<i>" & text & "</i>")
                         countImg = countImg + 1
                     Else
                         ' Kein HTML-Tag vorhanden
-                        text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt + 1) & "<a href=""" & fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
+                        text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt) & "<a href=""" & attachmentUpdates(i).fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
                         ' --> Link wird am Anfang eingefügt
                         msgUpdate = msgUpdate & text & vbCrLf
                         countAtt = countAtt + 1
@@ -265,23 +265,23 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                                 
                 mailProtection = mailEditor.ProtectionType
                 If (mailProtection <> wdNoProtection) Then
-                    'Debug.Print "  Mail ist gegen Bearbeitung geschützt: Hebe Schutz auf"
                     mailEditor.UnProtect
                 End If
                                 
                 For i = 0 To archivedAttachments - 1
                     text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).fileName & """"
                     position = attachmentUpdates(i).position + offset - 1
-                    Debug.Print "    inserting at " & position & ": " & text
                     
                     mailEditor.Characters(position).InsertAfter (text)
                     ' Text kursiv machen
                     mailEditor.Range(position, position + Len(text)).Italic = True
-                    ' Ich weiss nicht genau warum, aber da ist ein offset in der
-                    ' Position drin, der sich von Anhang zu Anhang aufsummiert
+                    ' Ich weiss nicht genau warum, aber da ist ein offset in der Position drin, der sich von Anhang zu Anhang aufsummiert
                     ' Und dann noch den neu eingefügten Link berücksichtigen
                     offset = offset - 31 + Len(text)
                 Next i
+                
+                ' Editor aktivieren, damit Änderungen korrekt gespeichert werden
+                mailEditor.Activate
             Else
                 Debug.Print "  Aktualisiere Plain-Text-Inhalt"
                 msgUpdate = ""
@@ -322,13 +322,11 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                     Set pic = ClipboardUtil.PastePicture(xlBitmap)
                     w = Round(pic.Width / FACTOR_HIMETRIC)
                     h = Round(pic.Height / FACTOR_HIMETRIC)
-                    Debug.Print "    Dimension~=" & w & "x" & h
                     estimatedSize = CLng(3) * w * h
-                    Debug.Print "    Size~=" & estimatedSize
                     
                     If (estimatedSize > AttachmentConfig.MIN_IMAGE_SIZE) Then
                         Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & fileName
-                              
+                                                      
                         fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
                         If Dir(fileFolder, vbDirectory) = "" Then
                             ' Ordner existiert nicht und muss erstellt werden
@@ -345,8 +343,14 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                             Call PicSave.SavePicture(pic, fileName, fmtPNG)
                             If (del) Then
                                 attachmentUpdates(archivedAttachments + archivedOLEs).fileName = fileName
-                                'attachmentUpdates(archivedAttachments + archivedOLEs).attachmentName = "image" & Format(counter, "000") & ".png"
+                                attachmentUpdates(archivedAttachments + archivedOLEs).position = ishpRng.End
                                 Set attachmentUpdates(archivedAttachments + archivedOLEs).shapeItem = ishp
+                                ' find matching attachment item for this OLE (so we can delete it later)
+                                For Each att In mail.Attachments
+                                    If (att.position = ishpRng.End) Then
+                                        Set attachmentUpdates(archivedAttachments + archivedOLEs).attachmentItem = att
+                                    End If
+                                Next att
                             End If
                             archivedOLEs = archivedOLEs + 1
                         Else
@@ -363,11 +367,18 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
         End If
         
         If (del And archivedOLEs > 0) Then
-            ' Löschen der Attachments darf erst ganz am Schluss erfolgen
-            ' Sonst zerhaut man sich die Schleife
-            Dim countOLE As Integer: countOLE = archivedOLEs
+              
+            mailProtection = mailEditor.ProtectionType
+            If (mailProtection <> wdNoProtection) Then
+                mailEditor.UnProtect
+            End If
+            
+            Dim countOLE As Integer: countOLE = 1
+            offset = 0
             For i = archivedOLEs + archivedAttachments - 1 To archivedAttachments Step -1
                 text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countOLE) & """file://" & attachmentUpdates(i).fileName & """"
+                position = attachmentUpdates(i).position + offset - 1
+                
                 attachmentUpdates(i).shapeItem.Range.InsertAfter (text)
                 position = attachmentUpdates(i).shapeItem.Range.End
                 ' Text kursiv machen
@@ -376,14 +387,15 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                 attachmentUpdates(i).shapeItem.Delete
                 countOLE = countOLE - 1
             Next i
-            
+                        
+            ' Editor aktivieren, damit Änderungen korrekt gespeichert werden
+            mailEditor.Activate
             Debug.Print "  Speichere aktualisierte Mail"
             mail.Save
         End If
-        
     End If
         
-    ArchiveAttachments = archivedAttachments
+    ArchiveAttachments = archivedAttachments + archivedOLEs
 End Function
 
 '--------------------------------------------------
@@ -405,7 +417,7 @@ Public Function GetFileNamePattern(mail As MailItem) As String
         ' Message wurde von einem selbst gesendet
         fileNamePattern = Replace(fileNamePattern, "%DIRECTION", AttachmentConfig.DIRECTION_TO)
         ' Für jeden Empfänger einen Eintrag in den Platzhaltern vornehmen
-        For rec = 1 To mail.Recipients.Count
+        For rec = 1 To mail.Recipients.count
             ' nur "An" Empfaenger (Type = 1) betrachten
             If (mail.Recipients.Item(rec).Type = 1) Then
                 address = GetAddress(mail.Recipients.Item(rec).addressEntry)
@@ -524,26 +536,48 @@ End Function
 ' Dialog wird nur angezeigt, wenn in AttachmentConfig aktiviert
 '--------------------------------------------------
 Private Sub ShowSummary(selectedMails As Integer, archivedMails As Integer, archivedAttachments As Integer, archivedBytes As Long)
-    If (AttachmentConfig.SHOW_SUMMARY) Then
-        If (selectedMails = 0) Then
-            Call MsgBox(MSG_MAILS_0, vbOKOnly, MSG_TITLE)
-        ElseIf (selectedMails = 1) Then
-            If (archivedAttachments = 0) Then
-                Call MsgBox(MSG_ARCHIVED_0, vbOKOnly, MSG_TITLE)
-            ElseIf (archivedAttachments = 1) Then
-                Call MsgBox(archivedAttachments & MSG_ARCHIVED_1, vbOKOnly, MSG_TITLE)
-            Else
-                Call MsgBox(archivedAttachments & MSG_ARCHIVED_N, vbOKOnly, MSG_TITLE)
-            End If
+    Dim msg As String
+    Dim sizeUnit As String
+    Dim sizeScaled As Double
+    Dim FACTOR As Double: FACTOR = 1024#
+        
+    If (selectedMails = 0) Then
+        msg = MSG_MAILS_0
+    ElseIf (selectedMails = 1) Then
+        If (archivedAttachments = 0) Then
+            msg = MSG_ARCHIVED_0
+        ElseIf (archivedAttachments = 1) Then
+            msg = archivedAttachments & MSG_ARCHIVED_1
         Else
-            If (archivedAttachments = 0) Then
-                Call MsgBox(archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & MSG_ARCHIVED_0, vbOKOnly, MSG_TITLE)
-            ElseIf (archivedAttachments = 1) Then
-                Call MsgBox(archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & archivedAttachments & MSG_ARCHIVED_1, vbOKOnly, MSG_TITLE)
-            Else
-                Call MsgBox(archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & archivedAttachments & MSG_ARCHIVED_N, vbOKOnly, MSG_TITLE)
-            End If
+            msg = archivedAttachments & MSG_ARCHIVED_N
         End If
+    Else
+        If (archivedAttachments = 0) Then
+            msg = archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & MSG_ARCHIVED_0
+        ElseIf (archivedAttachments = 1) Then
+            msg = archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & archivedAttachments & MSG_ARCHIVED_1
+        Else
+            msg = archivedMails & MSG_MAILS_OF & selectedMails & MSG_MAILS_N & vbCrLf & archivedAttachments & MSG_ARCHIVED_N
+        End If
+    End If
+    
+    If (archivedBytes < FACTOR) Then
+        sizeUnit = "B"
+        sizeScaled = archivedBytes
+    ElseIf (archivedBytes < FACTOR * FACTOR) Then
+        sizeUnit = "KB"
+        sizeScaled = Round(archivedBytes / FACTOR, 2)
+    Else
+        sizeUnit = "MB"
+        sizeScaled = Round(archivedBytes / FACTOR / FACTOR, 2)
+    End If
+    
+    msg = msg & vbCrLf & MSG_SIZE & sizeScaled & " " & sizeUnit
+    
+    Debug.Print msg
+        
+    If (AttachmentConfig.SHOW_SUMMARY) Then
+        Call MsgBox(msg, vbOKOnly, MSG_TITLE)
     End If
 End Sub
 

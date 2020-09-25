@@ -110,7 +110,7 @@ Private Type EncoderParameter
 End Type
 
 Private Type EncoderParameters
-    Count As Long 'Must always be set to 0 or 1 here, we have just one declared below.
+    count As Long 'Must always be set to 0 or 1 here, we have just one declared below.
     Parameter As EncoderParameter
 End Type
 
@@ -202,7 +202,7 @@ Public Sub SavePicture( _
     With Params
         If Format = fmtJPEG Then
             EncoderGUID = ImageFormatJPEG
-            .Count = 1
+            .count = 1
             With .Parameter
                 .EncoderGUID = EncoderQuality
                 .NumberOfValues = 1
