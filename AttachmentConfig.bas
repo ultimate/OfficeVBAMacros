@@ -2,11 +2,8 @@ Attribute VB_Name = "AttachmentConfig"
 '--------------------------------------------------
 ' Definition der benötigen Konstanten und Konfiguration
 '--------------------------------------------------
-' Pfad zum lokal ausgecheckten SVN
-Public Const SVN_FOLDER As String = "D:\SVN\Project_X"
-' Relativer Pfad zur Kürzel-Datei im SVN
-' FEST! Nur ändern, wenn Kürzel-Datei außerhalb des SVNs abgelegt wird
-Public Const KUERZEL_FILE As String = SVN_FOLDER & "\kuerzel.properties"
+' Pfad zur Kürzel-Datei
+Public Const KUERZEL_FILE As String = "D:\Project_X\kuerzel.properties"
 ' Pfad zum Archiv für Email-Anhänge
 Public Const ARCHIVE_FOLDER = "Y:\Eigene Dateien\_Archiv"
 ' Ablage-Namens-Struktur für Dateianhänge (kann Ordnerpfade enthalten)

@@ -130,52 +130,65 @@ End Sub
 Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
     
     ' Ein paar Variablen
-    Dim fileName As String
-    Dim fileFolder As String
     Dim fileNamePattern As String
-    Dim saveFile As Boolean
-    Dim att As attachment
-    Dim position As Integer
-    Dim offset As Integer: offset = 0
     Dim archivedAttachments As Integer: archivedAttachments = 0
-    Dim attachmentUpdates() As AttachmentUpdate: ReDim attachmentUpdates(mail.Attachments.count)
-    Dim counter As Integer
-    Dim i As Integer
-    Dim text As String
-        
-    ' RTF-Word-Editor
-    Dim mailInspector As Outlook.Inspector
-    Dim mailEditor As Word.Document
-    Dim mailProtection As WdProtectionType
-    Dim ishp As Word.InlineShape
-    Dim ishpRng As Word.Range
-    Dim pic As IPictureDisp
-    Dim PicSave As PicSave
     Dim archivedOLEs As Integer: archivedOLEs = 0
-    
-    ' RTF-Variablen nur bei RFT-Mail initialisieren
-    If (mail.BodyFormat = olFormatRichText) Then
-        Set mailInspector = mail.GetInspector
-        Set mailEditor = mailInspector.WordEditor
-        Set PicSave = New PicSave
-        ReDim attachmentUpdates(mail.Attachments.count + mailEditor.InlineShapes.count)
-    End If
             
     fileNamePattern = GetFileNamePattern(mail)
     
-    Debug.Print "Archiviere Anhänge im Pfad -> " & archiveFolder & "\" & fileNamePattern
+    Debug.Print "Archiviere Anhänge im Pfad -> " & ARCHIVE_FOLDER & "\" & fileNamePattern
     Debug.Print "  Anhänge werden entfernt? " & del
         
     If (mail.Attachments.count > 0) Then
         ' (normale) Anhänge behandeln
+        archivedAttachments = HandleAttachments(mail, del, fileNamePattern)
+        
+        If (mail.BodyFormat = olFormatRichText) Then
+            ' OLE Bilder behandeln
+            archivedOLEs = HandleOLEImages(mail, del, fileNamePattern)
+        End If
+    End If
+        
+    ArchiveAttachments = archivedAttachments + archivedOLEs
+End Function
+
+'--------------------------------------------------
+' Normale Anhaenge behandeln
+'--------------------------------------------------
+Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePattern As String) As Integer
+    If (mail.Attachments.count > 0) Then
+    
+        ' Ein paar Variablen
+        Dim fileName As String
+        Dim fileFolder As String
+        Dim overwrite As Boolean
+        Dim att As attachment
+        Dim position As Integer
+        Dim offset As Integer: offset = 0
+        Dim counter As Integer
+        Dim i As Integer
+        Dim text As String
+            
+        ' RTF-Word-Editor
+        Dim mailInspector As Outlook.Inspector
+        Dim mailEditor As Word.Document
+        Dim mailProtection As WdProtectionType
+        
+        ' RTF-Variablen nur bei RFT-Mail initialisieren
+        If (mail.BodyFormat = olFormatRichText) Then
+            Set mailInspector = mail.GetInspector
+            Set mailEditor = mailInspector.WordEditor
+        End If
+        
+        Dim archivedAttachments As Integer: archivedAttachments = 0
+        Dim attachmentUpdates() As AttachmentUpdate: ReDim attachmentUpdates(mail.Attachments.count)
+        
         counter = 1
         For Each att In mail.Attachments
-            'Debug.Print att.Type & " (ole=" & olOLE & ")"
             If (att.Type = olOLE) Then
                 ' OLE-Bilder müssen separat behandelt werden!
                 ' Speichern der Bilder ist nur über RTF-Word-Editor möglich
                 ' Normales Speichern resultiert in nicht lesbarem Bitmap
-                'Debug.Print "POSITION=" & att.position
             ElseIf (att.Size >= AttachmentConfig.MIN_FILE_SIZE) Then
                 
                 ' Dateiname aus Pattern ermitteln
@@ -300,72 +313,103 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
             mail.Save
         End If
         
-        ' OLE Bilder behandeln
-        counter = 1
-        If (mail.BodyFormat = olFormatRichText) Then
-            Dim w As Integer
-            Dim h As Integer
-            Dim estimatedSize As Long
+        HandleAttachments = archivedAttachments
+    Else
+        HandleAttachments = 0
+    End If
+End Function
 
-            For Each ishp In mailEditor.InlineShapes
-                ' Dateiname aus Pattern ermitteln
-                fileName = fileNamePattern
-                fileName = Replace(fileName, "%FILENAME", "image" & Format(counter, "000") & ".png")
-                If (AttachmentConfig.REPLACE_SPACES) Then
-                    fileName = Replace(fileName, " ", "_")
-                End If
-                fileName = AttachmentConfig.ARCHIVE_FOLDER & "\" & fileName
+'--------------------------------------------------
+' OLE Bilder behandeln
+'--------------------------------------------------
+Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePattern As String) As Integer
+    If (mail.BodyFormat = olFormatRichText) Then
+    
+        ' Ein paar Variablen
+        Dim fileName As String
+        Dim fileFolder As String
+        Dim overwrite As Boolean
+        Dim att As attachment
+        Dim position As Integer
+        Dim offset As Integer: offset = 0
+        Dim counter As Integer
+        Dim i As Integer
+        Dim text As String
+        Dim w As Integer
+        Dim h As Integer
+        Dim estimatedSize As Long
+        
+        ' RTF-Word-Editor
+        Dim mailInspector As Outlook.Inspector: Set mailInspector = mail.GetInspector
+        Dim mailEditor As Word.Document: Set mailEditor = mailInspector.WordEditor
+        Dim mailProtection As WdProtectionType
+        Dim ishp As Word.InlineShape
+        Dim ishpRng As Word.Range
+        Dim pic As IPictureDisp
+        Dim PicSave As PicSave: Set PicSave = New PicSave
+        
+        Dim archivedOLEs As Integer: archivedOLEs = 0
+        Dim attachmentUpdates() As AttachmentUpdate: ReDim attachmentUpdates(mailEditor.InlineShapes.count)
                 
-                If ishp.Type = Word.WdInlineShapeType.wdInlineShapePicture Then
-                    Set ishpRng = ishp.Range
-                    ishpRng.CopyAsPicture
-                    Set pic = ClipboardUtil.PastePicture(xlBitmap)
-                    w = Round(pic.Width / FACTOR_HIMETRIC)
-                    h = Round(pic.Height / FACTOR_HIMETRIC)
-                    estimatedSize = CLng(3) * w * h
-                    
-                    If (estimatedSize > AttachmentConfig.MIN_IMAGE_SIZE) Then
-                        Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & fileName
-                                                      
-                        fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
-                        If Dir(fileFolder, vbDirectory) = "" Then
-                            ' Ordner existiert nicht und muss erstellt werden
-                            MkDir (fileFolder)
-                            overwrite = True
-                        ElseIf Dir(fileName) <> "" Then
-                            ' Datei existiert bereits
-                            overwrite = ShowOverwrite(fileName)
-                        Else
-                            overwrite = True
-                        End If
-                        
-                        If (overwrite) Then
-                            Call PicSave.SavePicture(pic, fileName, fmtPNG)
-                            If (del) Then
-                                attachmentUpdates(archivedAttachments + archivedOLEs).fileName = fileName
-                                attachmentUpdates(archivedAttachments + archivedOLEs).position = ishpRng.End
-                                Set attachmentUpdates(archivedAttachments + archivedOLEs).shapeItem = ishp
-                                ' find matching attachment item for this OLE (so we can delete it later)
-                                For Each att In mail.Attachments
-                                    If (att.position = ishpRng.End) Then
-                                        Set attachmentUpdates(archivedAttachments + archivedOLEs).attachmentItem = att
-                                    End If
-                                Next att
-                            End If
-                            archivedOLEs = archivedOLEs + 1
-                        Else
-                            Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> DATEI EXISTIERT BEREITS"
-                        End If
+        counter = 1
+        For Each ishp In mailEditor.InlineShapes
+            ' Dateiname aus Pattern ermitteln
+            fileName = fileNamePattern
+            fileName = Replace(fileName, "%FILENAME", "image" & Format(counter, "000") & ".png")
+            If (AttachmentConfig.REPLACE_SPACES) Then
+                fileName = Replace(fileName, " ", "_")
+            End If
+            fileName = AttachmentConfig.ARCHIVE_FOLDER & "\" & fileName
+            
+            If ishp.Type = Word.WdInlineShapeType.wdInlineShapePicture Then
+                Set ishpRng = ishp.Range
+                ishpRng.CopyAsPicture
+                Set pic = ClipboardUtil.PastePicture(xlBitmap)
+                w = Round(pic.Width / FACTOR_HIMETRIC)
+                h = Round(pic.Height / FACTOR_HIMETRIC)
+                estimatedSize = CLng(3) * w * h
+                
+                If (estimatedSize > AttachmentConfig.MIN_IMAGE_SIZE) Then
+                    Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & fileName
+                                                  
+                    fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
+                    If Dir(fileFolder, vbDirectory) = "" Then
+                        ' Ordner existiert nicht und muss erstellt werden
+                        MkDir (fileFolder)
+                        overwrite = True
+                    ElseIf Dir(fileName) <> "" Then
+                        ' Datei existiert bereits
+                        overwrite = ShowOverwrite(fileName)
                     Else
-                        Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ")"
+                        overwrite = True
+                    End If
+                    
+                    If (overwrite) Then
+                        Call PicSave.SavePicture(pic, fileName, fmtPNG)
+                        If (del) Then
+                            attachmentUpdates(archivedOLEs).fileName = fileName
+                            attachmentUpdates(archivedOLEs).position = ishpRng.End
+                            Set attachmentUpdates(archivedOLEs).shapeItem = ishp
+                            ' find matching attachment item for this OLE (so we can delete it later)
+                            For Each att In mail.Attachments
+                                If (att.position = ishpRng.End) Then
+                                    Set attachmentUpdates(archivedOLEs).attachmentItem = att
+                                End If
+                            Next att
+                        End If
+                        archivedOLEs = archivedOLEs + 1
+                    Else
+                        Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> DATEI EXISTIERT BEREITS"
                     End If
                 Else
-                    Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ")"
+                    Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ")"
                 End If
-                counter = counter + 1
-            Next ishp
-        End If
-        
+            Else
+                Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ")"
+            End If
+            counter = counter + 1
+        Next ishp
+    
         If (del And archivedOLEs > 0) Then
               
             mailProtection = mailEditor.ProtectionType
@@ -375,8 +419,8 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
             
             Dim countOLE As Integer: countOLE = 1
             offset = 0
-            For i = archivedOLEs + archivedAttachments - 1 To archivedAttachments Step -1
-                text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countOLE) & """file://" & attachmentUpdates(i).fileName & """"
+            For i = archivedOLEs - 1 To 0 Step -1
+                text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).fileName & """"
                 position = attachmentUpdates(i).position + offset - 1
                 
                 attachmentUpdates(i).shapeItem.Range.InsertAfter (text)
@@ -385,7 +429,6 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
                 mailEditor.Range(position, position + Len(text)).Italic = True
                 ' Shape entfernen
                 attachmentUpdates(i).shapeItem.Delete
-                countOLE = countOLE - 1
             Next i
                         
             ' Editor aktivieren, damit Änderungen korrekt gespeichert werden
@@ -393,9 +436,12 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
             Debug.Print "  Speichere aktualisierte Mail"
             mail.Save
         End If
-    End If
         
-    ArchiveAttachments = archivedAttachments + archivedOLEs
+        HandleOLEImages = archivedOLEs
+    Else
+        HandleOLEImages = 0
+    End If
+    
 End Function
 
 '--------------------------------------------------
