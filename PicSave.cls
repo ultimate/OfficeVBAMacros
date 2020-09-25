@@ -157,7 +157,7 @@ Dim fmtGIF, fmtJPEG, fmtPNG
 
 Public Sub SavePicture( _
     ByVal StdPicture As StdPicture, _
-    ByVal fileName As String, _
+    ByVal filename As String, _
     ByVal Format As SavePictureFormats, _
     Optional ByVal JpegQualityPct As Long = 70)
 
@@ -179,7 +179,7 @@ Public Sub SavePicture( _
                   TypeName(Me), _
                   "GdipCreateBitmapFromHBITMAP error " & CStr(HRESULT)
     End If
-    HRESULT = SHCreateStreamOnFile(StrPtr(fileName), _
+    HRESULT = SHCreateStreamOnFile(StrPtr(filename), _
                                    STGM_CREATE Or STGM_WRITE Or STGM_SHARE_EXCLUSIVE, _
                                    Stream)
     If HRESULT <> S_OK Then
@@ -189,7 +189,7 @@ Public Sub SavePicture( _
                   "SHCreateStreamOnFile error " & CStr(HRESULT)
     End If
     Set Stream = Nothing 'Force creation on 64-bit Windows.
-    HRESULT = SHCreateStreamOnFile(StrPtr(fileName), _
+    HRESULT = SHCreateStreamOnFile(StrPtr(filename), _
                                    STGM_CREATE Or STGM_WRITE Or STGM_SHARE_EXCLUSIVE, _
                                    Stream)
     If HRESULT <> S_OK Then

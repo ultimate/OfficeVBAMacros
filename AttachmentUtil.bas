@@ -23,6 +23,8 @@ Private Const OPTION_CANCEL As Integer = -1
                                 & "Achtung: Nutzung auf eigene Gefahr!"
     Private Const MSG_OVERWRITE As String = "Datei bereits vorhanden! Überschreiben?" & vbCrLf _
                                 & "  %FILENAME"
+    Private Const MSG_NO_KUERZEL As String = "Kein Kontakt-Kürzel gefunden! Fortfahren?" & vbCrLf _
+                                & "  %FILENAME"
     Private Const MSG_ARCHIVED_0 As String = "Keine Anhänge zum archivieren vorhanden"
     Private Const MSG_ARCHIVED_1 As String = " Anhang erfolgreich archiviert"
     Private Const MSG_ARCHIVED_N As String = " Anhänge erfolgreich archiviert"
@@ -42,6 +44,8 @@ Private Const OPTION_CANCEL As Integer = -1
                                 & "Attention: Use at your own risk!"
     Private Const MSG_OVERWRITE As String = "File exists! Overwrite?" & vbCrLf _
                                 & "  %FILENAME"
+    Private Const MSG_NO_KUERZEL As String = "No contact symbol found! Continue?" & vbCrLf _
+                                & "  %FILENAME"
     Private Const MSG_ARCHIVED_0 As String = "No attachments available for archiving"
     Private Const MSG_ARCHIVED_1 As String = " attachment successfully archived"
     Private Const MSG_ARCHIVED_N As String = " attachments successfully archived"
@@ -59,7 +63,7 @@ Private Const FACTOR_HIMETRIC As Double = 26.45833
 ' Custom Type für die Bearbeitung der Mails
 '--------------------------------------------------
 Private Type AttachmentUpdate
-     fileName As String
+     filename As String
      position As Integer
      attachmentName As String
      attachmentItem As attachment
@@ -133,20 +137,32 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
     Dim fileNamePattern As String
     Dim archivedAttachments As Integer: archivedAttachments = 0
     Dim archivedOLEs As Integer: archivedOLEs = 0
+    Dim continueWithoutKuerzel As Boolean
             
     fileNamePattern = GetFileNamePattern(mail)
     
-    Debug.Print "Archiviere Anhänge im Pfad -> " & ARCHIVE_FOLDER & "\" & fileNamePattern
-    Debug.Print "  Anhänge werden entfernt? " & del
-        
-    If (mail.Attachments.count > 0 And mail.Size > AttachmentConfig.MIN_MAIL_SIZE) Then
-        ' (normale) Anhänge behandeln
-        archivedAttachments = HandleAttachments(mail, del, fileNamePattern)
-        
-        If (mail.BodyFormat = olFormatRichText) Then
-            ' OLE Bilder behandeln
-            archivedOLEs = HandleOLEImages(mail, del, fileNamePattern)
+    ' Prüfe, ob Dateiname ein @ enthält = kein Kürzel gefunden
+    If (InStr(fileNamePattern, "@") <> 0) Then
+        continueWithoutKuerzel = ShowNoKuerzel(fileNamePattern)
+    Else
+        continueWithoutKuerzel = True
+    End If
+    
+    If (continueWithoutKuerzel) Then
+        Debug.Print "Archiviere Anhänge im Pfad -> " & ARCHIVE_FOLDER & "\" & fileNamePattern
+        Debug.Print "  Anhänge werden entfernt? " & del
+            
+        If (mail.Attachments.count > 0 And mail.Size > AttachmentConfig.MIN_MAIL_SIZE) Then
+            ' (normale) Anhänge behandeln
+            archivedAttachments = HandleAttachments(mail, del, fileNamePattern)
+            
+            If (mail.BodyFormat = olFormatRichText) Then
+                ' OLE Bilder behandeln
+                archivedOLEs = HandleOLEImages(mail, del, fileNamePattern)
+            End If
         End If
+    Else
+        Debug.Print "Archivieren abgebrochen, da kein Kürzel gefunden -> " & ARCHIVE_FOLDER & "\" & fileNamePattern
     End If
         
     ArchiveAttachments = archivedAttachments + archivedOLEs
@@ -159,7 +175,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
     If (mail.Attachments.count > 0) Then
     
         ' Ein paar Variablen
-        Dim fileName As String
+        Dim filename As String
         Dim fileFolder As String
         Dim overwrite As Boolean
         Dim att As attachment
@@ -192,19 +208,19 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 ' Normales Speichern resultiert in nicht lesbarem Bitmap
             Else
                 ' Dateiname aus Pattern ermitteln
-                fileName = fileNamePattern
-                fileName = Replace(fileName, "%FILENAME", att.fileName)
+                filename = fileNamePattern
+                filename = Replace(filename, "%FILENAME", att.filename)
                 If (AttachmentConfig.REPLACE_SPACES) Then
-                    fileName = Replace(fileName, " ", "_")
+                    filename = Replace(filename, " ", "_")
                 End If
-                fileName = AttachmentConfig.ARCHIVE_FOLDER & "\" & fileName
+                filename = AttachmentConfig.ARCHIVE_FOLDER & "\" & filename
                 
                 ' Prüfen, ob es ein HTML-Bild ist
                 imgToSmall = False
                 If (mail.BodyFormat = olFormatHTML) Then
                     ' Suche nach HTML TAG für eingebettetes Bild in der Form
                     ' <img width=85 height=76 id="Bild_x0020_1" src="cid:image001.png@01D29976.A64E5DB0">
-                    If (InStr(mail.HTMLBody, "src=""cid:" & att.fileName & "@") <> 0) Then
+                    If (InStr(mail.HTMLBody, "src=""cid:" & att.filename & "@") <> 0) Then
                         If (att.Size < AttachmentConfig.MIN_IMAGE_SIZE) Then
                             imgToSmall = True
                         End If
@@ -213,34 +229,34 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
             
                 If (att.Size >= AttachmentConfig.MIN_FILE_SIZE And Not imgToSmall) Then
                     
-                    fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
+                    fileFolder = Left(filename, InStrRev(filename, "\") - 1)
                     If Dir(fileFolder, vbDirectory) = "" Then
                         ' Ordner existiert nicht und muss erstellt werden
                         MkDir (fileFolder)
                         overwrite = True
-                    ElseIf Dir(fileName) <> "" Then
+                    ElseIf Dir(filename) <> "" Then
                         ' Datei existiert bereits
-                        overwrite = ShowOverwrite(fileName)
+                        overwrite = ShowOverwrite(filename)
                     Else
                         overwrite = True
                     End If
                     
                     If (overwrite) Then
-                        Debug.Print "  Archiviere Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> " & fileName
+                        Debug.Print "  Archiviere Anhang: " & att.filename & " (Größe=" & att.Size & ") -> " & filename
                     
-                        att.SaveAsFile (fileName)
+                        att.SaveAsFile (filename)
                         
-                        attachmentUpdates(archivedAttachments).fileName = fileName
-                        attachmentUpdates(archivedAttachments).attachmentName = att.fileName
+                        attachmentUpdates(archivedAttachments).filename = filename
+                        attachmentUpdates(archivedAttachments).attachmentName = att.filename
                         attachmentUpdates(archivedAttachments).position = att.position
                         Set attachmentUpdates(archivedAttachments).attachmentItem = att
                         
                         archivedAttachments = archivedAttachments + 1
                     Else
-                        Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
+                        Debug.Print "  Überspringe Anhang: " & att.filename & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
                     End If
                 Else
-                    Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ")"
+                    Debug.Print "  Überspringe Anhang: " & att.filename & " (Größe=" & att.Size & ")"
                 End If
             End If
             counter = counter + 1
@@ -270,7 +286,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                     startIndex = InStr(mail.HTMLBody, "src=""cid:" & attachmentUpdates(i).attachmentName & "@")
                     If (startIndex <> 0) Then
                         ' HTML-Tag gefunden
-                        text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg) & "<a href=""" & attachmentUpdates(i).fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
+                        text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", countImg) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
                         ' --> Link an entsprechender Stelle einfügen
                         startIndex = InStrRev(mail.HTMLBody, "<img", startIndex)
                         endIndex = InStr(startIndex, mail.HTMLBody, """>")
@@ -279,7 +295,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                         countImg = countImg + 1
                     Else
                         ' Kein HTML-Tag vorhanden
-                        text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt) & "<a href=""" & attachmentUpdates(i).fileName & """>" & attachmentUpdates(i).fileName & "</a><br/>"
+                        text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", countAtt) & "<a href=""" & attachmentUpdates(i).filename & """>" & attachmentUpdates(i).filename & "</a><br/>"
                         ' --> Link wird am Anfang eingefügt
                         msgUpdate = msgUpdate & text & vbCrLf
                         countAtt = countAtt + 1
@@ -297,7 +313,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 End If
                                 
                 For i = 0 To archivedAttachments - 1
-                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).fileName & """"
+                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                     position = attachmentUpdates(i).position + offset - 1
                     
                     mailEditor.Characters(position).InsertAfter (text)
@@ -315,7 +331,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 msgUpdate = ""
                 maxLength = 0
                 For i = 0 To archivedAttachments - 1
-                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).fileName & """"
+                    text = Replace(MSG_ATT_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                     msgUpdate = msgUpdate & text & vbCrLf
                     If (Len(text) > maxLength) Then
                         maxLength = Len(text)
@@ -341,7 +357,7 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
     If (mail.BodyFormat = olFormatRichText) Then
     
         ' Ein paar Variablen
-        Dim fileName As String
+        Dim filename As String
         Dim fileFolder As String
         Dim overwrite As Boolean
         Dim att As attachment
@@ -369,12 +385,12 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
         counter = 1
         For Each ishp In mailEditor.InlineShapes
             ' Dateiname aus Pattern ermitteln
-            fileName = fileNamePattern
-            fileName = Replace(fileName, "%FILENAME", "image" & Format(counter, "000") & ".png")
+            filename = fileNamePattern
+            filename = Replace(filename, "%FILENAME", "image" & Format(counter, "000") & ".png")
             If (AttachmentConfig.REPLACE_SPACES) Then
-                fileName = Replace(fileName, " ", "_")
+                filename = Replace(filename, " ", "_")
             End If
-            fileName = AttachmentConfig.ARCHIVE_FOLDER & "\" & fileName
+            filename = AttachmentConfig.ARCHIVE_FOLDER & "\" & filename
             
             If ishp.Type = Word.WdInlineShapeType.wdInlineShapePicture Then
                 Set ishpRng = ishp.Range
@@ -385,24 +401,24 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
                 estimatedSize = CLng(3) * w * h
                 
                 If (estimatedSize > AttachmentConfig.MIN_IMAGE_SIZE) Then
-                    Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & fileName
+                    Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & filename
                                                   
-                    fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
+                    fileFolder = Left(filename, InStrRev(filename, "\") - 1)
                     If Dir(fileFolder, vbDirectory) = "" Then
                         ' Ordner existiert nicht und muss erstellt werden
                         MkDir (fileFolder)
                         overwrite = True
-                    ElseIf Dir(fileName) <> "" Then
+                    ElseIf Dir(filename) <> "" Then
                         ' Datei existiert bereits
-                        overwrite = ShowOverwrite(fileName)
+                        overwrite = ShowOverwrite(filename)
                     Else
                         overwrite = True
                     End If
                     
                     If (overwrite) Then
-                        Call PicSave.SavePicture(pic, fileName, fmtPNG)
+                        Call PicSave.SavePicture(pic, filename, fmtPNG)
                         If (del) Then
-                            attachmentUpdates(archivedOLEs).fileName = fileName
+                            attachmentUpdates(archivedOLEs).filename = filename
                             attachmentUpdates(archivedOLEs).position = ishpRng.End
                             Set attachmentUpdates(archivedOLEs).shapeItem = ishp
                             ' find matching attachment item for this OLE (so we can delete it later)
@@ -435,7 +451,7 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
             Dim countOLE As Integer: countOLE = 1
             offset = 0
             For i = archivedOLEs - 1 To 0 Step -1
-                text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).fileName & """"
+                text = Replace(MSG_IMG_IN_MAIL_TEXT, "%I", i + 1) & """file://" & attachmentUpdates(i).filename & """"
                 position = attachmentUpdates(i).position + offset - 1
                 
                 attachmentUpdates(i).shapeItem.Range.InsertAfter (text)
@@ -665,10 +681,10 @@ End Sub
 ' Dialog wird nur angezeigt, wenn in AttachmentConfig aktiviert
 ' Gibt TRUE oder FALSE zurück
 '--------------------------------------------------
-Private Function ShowOverwrite(fileName As String) As Boolean
+Private Function ShowOverwrite(filename As String) As Boolean
     Dim opt As Integer
     If (AttachmentConfig.SHOW_OVERWRITE) Then
-        opt = MsgBox(Replace(MSG_OVERWRITE, "%FILENAME", fileName), vbYesNo, MSG_TITLE)
+        opt = MsgBox(Replace(MSG_OVERWRITE, "%FILENAME", filename), vbYesNo, MSG_TITLE)
         If (opt = vbYes) Then
             ShowOverwrite = True
         Else
@@ -678,3 +694,23 @@ Private Function ShowOverwrite(fileName As String) As Boolean
         ShowOverwrite = AttachmentConfig.OVERWRITE_EXISTING_FILES
     End If
 End Function
+
+'--------------------------------------------------
+' Zeige den Kein-Kürzel-Gefunden-Dialog
+' Dialog wird nur angezeigt, wenn in AttachmentConfig aktiviert
+' Gibt TRUE oder FALSE zurück
+'--------------------------------------------------
+Private Function ShowNoKuerzel(filename As String) As Boolean
+    Dim opt As Integer
+    If (AttachmentConfig.SHOW_NO_KUERZEL) Then
+        opt = MsgBox(Replace(MSG_NO_KUERZEL, "%FILENAME", filename), vbYesNo, MSG_TITLE)
+        If (opt = vbYes) Then
+            ShowNoKuerzel = True
+        Else
+            ShowNoKuerzel = False
+        End If
+    Else
+        ShowNoKuerzel = True
+    End If
+End Function
+

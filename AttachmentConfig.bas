@@ -15,7 +15,7 @@ Public Const ARCHIVE_FOLDER = "Y:\Eigene Dateien\_Archiv"
 '                       // siehe DIRECTION_FROM and DIRECTION_TO
 ' - %CONTACTMAIL        // Email-Adresse des Kommunikationspartners
 ' - %CONTACTNAME        // Name des Kommunikationspartners
-' - %CONTACTSYMBOL      // Kürzel des Kommunikationspartners gemäß kuerzel.txt
+' - %CONTACTSYMBOL      // Kürzel des Kommunikationspartners gemäß kuerzel.properties
 '                       // Falls Kürzel nicht enthalten, wird die Email-Adresse ausgegeben
 ' - %FILENAME           // original Dateiname
 Public Const FILENAME_PATTERN As String = "%DATETIME %DIRECTION %CONTACTSYMBOL\%FILENAME"
@@ -35,7 +35,7 @@ Public Const REPLACE_SPACES As Boolean = False
 '   MIN_IMAGE_SIZE = Mindestgröße für eingebettete Bilder (RTF oder HTML)
 ' Hinweis: Die tatsächliche Größe auf der Festplatte kann bei OLE-Objekten und OLE-Bildern
 '   von der Speichergröße in der Mail abweichen (in der Mail sind die Datei i.d.R. Größer).
-' Hinweis: 12000 reicht damit Firmen-Logo nicht archiviert werden.
+' Hinweis: 12000 reicht damit kleine Firmen-Logos nicht archiviert werden.
 '   Wenn man das nicht will, einfach 0 oder anderen kleineren Wert eintragen
 Public Const MIN_MAIL_SIZE As Long = 0
 Public Const MIN_FILE_SIZE As Long = 0
@@ -44,6 +44,7 @@ Public Const MIN_IMAGE_SIZE As Long = 12000
 Public Const SHOW_CONFIRM As Boolean = True
 Public Const SHOW_SUMMARY As Boolean = True
 Public Const SHOW_OVERWRITE As Boolean = False
+Public Const SHOW_NO_KUERZEL As Boolean = True
 ' Sollen Anhänge entfernt werden?
 ' Option wird genutzt, wenn kein Bestätigungs-Dialog angezeigt werden soll
 Public Const DELETE_ATTACHMENTS As Boolean = True
