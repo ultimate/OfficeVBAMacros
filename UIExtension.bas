@@ -50,3 +50,32 @@ Public Sub RemoveEncryption()
         Next mail
    End If
 End Sub
+
+'--------------------------------------------------
+' Konvertiere einen nicht-ganztägigen Termin in einen ganztägigen Termin
+' (Die Funktion ist erforderlich, wenn man Termine ändern möchte, bei denen man eingeladen
+' wurde, weil die Funktion dann nicht per UI verfügbar ist.)
+'--------------------------------------------------
+Public Sub ConvertAppointmentAllDay()
+    Dim appointment As AppointmentItem
+    
+    For Each appointment In Application.ActiveExplorer.selection
+        appointment.AllDayEvent = True
+        appointment.Save
+    Next appointment
+End Sub
+
+'--------------------------------------------------
+' Konvertiere einen ganztägigen Termin in einen nicht-ganztägigen Termin
+' (Die Funktion ist erforderlich, wenn man Termine ändern möchte, bei denen man eingeladen
+' wurde, weil die Funktion dann nicht per UI verfügbar ist.)
+'--------------------------------------------------
+Public Sub ConvertAppointmentNotAllDay()
+    Dim appointment As AppointmentItem
+    
+    For Each appointment In Application.ActiveExplorer.selection
+        appointment.AllDayEvent = False
+        appointment.Save
+    Next appointment
+End Sub
+

@@ -24,6 +24,10 @@ Private Const AUTH_CERT As String = "cert"
 ' CERT Authentification Sub-URL & Parameter
 Public Const CERT_URL As String = "login.form"
 Public Const CERT_PARAM As String = "login-form-type=cert"
+' Messages
+Private Const MSG_TITLE As String = "JiraUtil V1.1 by ultimate"
+Private Const MSG_CONFIRM As String = "Tasks werden aus Jira aktualisiert" & vbCrLf _
+                                & "Erledigte auch aktualisieren?"
 
 '--------------------------------------------------
 ' Custom Type für die Authentifizierung
@@ -59,7 +63,7 @@ Public Sub UpdateTasksFromJira()
     Set taskList = folder.Items
     
     Dim selection As Integer
-    selection = MsgBox("Tasks werden aus Jira aktualisiert" & vbNewLine & "Erledigte auch aktualisieren?", vbYesNoCancel + vbDefaultButton2, "Jira-Task-Status")
+    selection = MsgBox(MSG_CONFIRM, vbYesNoCancel + vbDefaultButton2, MSG_TITLE)
         
     If selection = vbYes Then
         total = taskList.count

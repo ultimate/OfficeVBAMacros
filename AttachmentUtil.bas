@@ -14,7 +14,7 @@ Private Const OPTION_WITHOUT_DELETE As Integer = 0
 Private Const OPTION_CANCEL As Integer = -1
 ' Anzeige-Messages
 #If LANGUAGE = "DE" Then
-    Private Const MSG_TITLE As String = "AttachmentUtil V1.0 by J.Verkin - Nutzung auf eigene Gefahr"
+    Private Const MSG_TITLE As String = "AttachmentUtil V1.1 by ultimate - Nutzung auf eigene Gefahr"
     Private Const MSG_CONFIRM As String = "Anhänge archivieren und entfernen?" & vbCrLf _
                                 & "  Ja = Archivieren UND Entfernen" & vbCrLf _
                                 & "  Nein = Archivieren OHNE Entfernen" & vbCrLf _
@@ -35,7 +35,7 @@ Private Const OPTION_CANCEL As Integer = -1
     Private Const MSG_ATT_IN_MAIL_TEXT As String = "Anhang %I entfernt und archivert unter: "
     Private Const MSG_IMG_IN_MAIL_TEXT As String = "Bild %I entfernt und archivert unter: "
 #Else
-    Private Const MSG_TITLE As String = "AttachmentUtil V1.0 by J.Verkin - Use at your own risk"
+    Private Const MSG_TITLE As String = "AttachmentUtil V1.1 by ultimate - Use at your own risk"
     Private Const MSG_CONFIRM As String = "Archive and remove attachments?" & vbCrLf _
                                 & "  Yes = archive AND remove" & vbCrLf _
                                 & "  No = archive WITHOUT remove" & vbCrLf _
@@ -202,7 +202,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
         
         counter = 1
         For Each att In mail.Attachments
-            If (att.Type = olOLE) Then
+            If (att.type = olOLE) Then
                 ' OLE-Bilder müssen separat behandelt werden!
                 ' Speichern der Bilder ist nur über RTF-Word-Editor möglich
                 ' Normales Speichern resultiert in nicht lesbarem Bitmap
@@ -310,6 +310,9 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 ' Anhänge nach Position sortieren
                 ' (es kann vorkommen, dass diese oben nicht in der richtigen Reihenfolge durchgegangen werden)
                 Call SortAttachmentUpdates(attachmentUpdates, archivedAttachments)
+                
+                ' TBD per XML bearbeiten
+                ' mailEditor.Content.XML
                                 
                 mailProtection = mailEditor.ProtectionType
                 If (mailProtection <> wdNoProtection) Then
@@ -410,7 +413,7 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
             End If
             filename = AttachmentConfig.ARCHIVE_FOLDER & "\" & filename
             
-            If ishp.Type = Word.WdInlineShapeType.wdInlineShapePicture Then
+            If ishp.type = Word.WdInlineShapeType.wdInlineShapePicture Then
                 Set ishpRng = ishp.Range
                 ishpRng.CopyAsPicture
                 Set pic = ClipboardUtil.PastePicture(xlBitmap)
@@ -419,7 +422,7 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
                 estimatedSize = CLng(3) * w * h
                 
                 If (estimatedSize > AttachmentConfig.MIN_IMAGE_SIZE) Then
-                    Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> " & filename
+                    Debug.Print "  Archiviere OLE " & counter & ": (Type=" & ishp.type & ", Größe=" & estimatedSize & ") -> " & filename
                                                   
                     fileFolder = Left(filename, InStrRev(filename, "\") - 1)
                     If Dir(fileFolder, vbDirectory) = "" Then
@@ -448,13 +451,13 @@ Private Function HandleOLEImages(mail As MailItem, del As Boolean, fileNamePatte
                         End If
                         archivedOLEs = archivedOLEs + 1
                     Else
-                        Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ") -> DATEI EXISTIERT BEREITS"
+                        Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.type & ", Größe=" & estimatedSize & ") -> DATEI EXISTIERT BEREITS"
                     End If
                 Else
-                    Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ", Größe=" & estimatedSize & ")"
+                    Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.type & ", Größe=" & estimatedSize & ")"
                 End If
             Else
-                Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.Type & ")"
+                Debug.Print "  Überspringe OLE " & counter & ": (Type=" & ishp.type & ")"
             End If
             counter = counter + 1
         Next ishp
@@ -514,7 +517,7 @@ Public Function GetFileNamePattern(mail As MailItem) As String
         ' Für jeden Empfänger einen Eintrag in den Platzhaltern vornehmen
         For rec = 1 To mail.Recipients.count
             ' nur "An" Empfaenger (Type = 1) betrachten
-            If (mail.Recipients.Item(rec).Type = 1) Then
+            If (mail.Recipients.Item(rec).type = 1) Then
                 address = GetAddress(mail.Recipients.Item(rec).addressEntry)
                 name = GetName(mail.Recipients.Item(rec).addressEntry)
                 fileNamePattern = Replace(fileNamePattern, "%CONTACTMAIL", address & ",%CONTACTMAIL")
