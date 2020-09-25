@@ -33,6 +33,29 @@ End Sub
 
 Public Sub Test_Something()
 
-    Debug.Print "something"
+    Debug.Print ("Test_Something")
+    Debug.Print ("------------------")
+    
+    Dim rec As Integer
+    Dim mail As MailItem
+    Dim address As String
+    Dim name As String
+    
+    Set olA = New Outlook.Application
+    Set olNS = olA.GetNamespace("MAPI")
+    
+    For Each mail In Application.ActiveExplorer.Selection
+    
+        For rec = 1 To mail.Recipients.count
+            If (mail.Recipients.Item(rec).Type = 1) Then
+                
+                address = GetAddress(mail.Recipients.Item(rec).addressEntry)
+                name = GetName(mail.Recipients.Item(rec).addressEntry)
+                Debug.Print (address)
+                Debug.Print (name)
+                Debug.Print ("------------------")
+            End If
+        Next
+    Next mail
 
 End Sub

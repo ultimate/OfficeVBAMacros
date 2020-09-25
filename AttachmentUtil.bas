@@ -139,7 +139,7 @@ Public Function ArchiveAttachments(mail As MailItem, del As Boolean) As Integer
     Debug.Print "Archiviere Anhänge im Pfad -> " & ARCHIVE_FOLDER & "\" & fileNamePattern
     Debug.Print "  Anhänge werden entfernt? " & del
         
-    If (mail.Attachments.count > 0) Then
+    If (mail.Attachments.count > 0 And mail.Size > AttachmentConfig.MIN_MAIL_SIZE) Then
         ' (normale) Anhänge behandeln
         archivedAttachments = HandleAttachments(mail, del, fileNamePattern)
         
@@ -168,6 +168,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
         Dim counter As Integer
         Dim i As Integer
         Dim text As String
+        Dim imgToSmall As Boolean
             
         ' RTF-Word-Editor
         Dim mailInspector As Outlook.Inspector
@@ -189,8 +190,7 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 ' OLE-Bilder müssen separat behandelt werden!
                 ' Speichern der Bilder ist nur über RTF-Word-Editor möglich
                 ' Normales Speichern resultiert in nicht lesbarem Bitmap
-            ElseIf (att.Size >= AttachmentConfig.MIN_FILE_SIZE) Then
-                
+            Else
                 ' Dateiname aus Pattern ermitteln
                 fileName = fileNamePattern
                 fileName = Replace(fileName, "%FILENAME", att.fileName)
@@ -199,44 +199,59 @@ Private Function HandleAttachments(mail As MailItem, del As Boolean, fileNamePat
                 End If
                 fileName = AttachmentConfig.ARCHIVE_FOLDER & "\" & fileName
                 
-                fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
-                If Dir(fileFolder, vbDirectory) = "" Then
-                    ' Ordner existiert nicht und muss erstellt werden
-                    MkDir (fileFolder)
-                    overwrite = True
-                ElseIf Dir(fileName) <> "" Then
-                    ' Datei existiert bereits
-                    overwrite = ShowOverwrite(fileName)
-                Else
-                    overwrite = True
+                ' Prüfen, ob es ein HTML-Bild ist
+                imgToSmall = False
+                If (mail.BodyFormat = olFormatHTML) Then
+                    ' Suche nach HTML TAG für eingebettetes Bild in der Form
+                    ' <img width=85 height=76 id="Bild_x0020_1" src="cid:image001.png@01D29976.A64E5DB0">
+                    If (InStr(mail.HTMLBody, "src=""cid:" & att.fileName & "@") <> 0) Then
+                        If (att.Size < AttachmentConfig.MIN_IMAGE_SIZE) Then
+                            imgToSmall = True
+                        End If
+                    End If
                 End If
-                
-                If (overwrite) Then
-                    Debug.Print "  Archiviere Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> " & fileName
-                
-                    att.SaveAsFile (fileName)
+            
+                If (att.Size >= AttachmentConfig.MIN_FILE_SIZE And Not imgToSmall) Then
                     
-                    attachmentUpdates(archivedAttachments).fileName = fileName
-                    attachmentUpdates(archivedAttachments).attachmentName = att.fileName
-                    attachmentUpdates(archivedAttachments).position = att.position
-                    Set attachmentUpdates(archivedAttachments).attachmentItem = att
+                    fileFolder = Left(fileName, InStrRev(fileName, "\") - 1)
+                    If Dir(fileFolder, vbDirectory) = "" Then
+                        ' Ordner existiert nicht und muss erstellt werden
+                        MkDir (fileFolder)
+                        overwrite = True
+                    ElseIf Dir(fileName) <> "" Then
+                        ' Datei existiert bereits
+                        overwrite = ShowOverwrite(fileName)
+                    Else
+                        overwrite = True
+                    End If
                     
-                    archivedAttachments = archivedAttachments + 1
+                    If (overwrite) Then
+                        Debug.Print "  Archiviere Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> " & fileName
+                    
+                        att.SaveAsFile (fileName)
+                        
+                        attachmentUpdates(archivedAttachments).fileName = fileName
+                        attachmentUpdates(archivedAttachments).attachmentName = att.fileName
+                        attachmentUpdates(archivedAttachments).position = att.position
+                        Set attachmentUpdates(archivedAttachments).attachmentItem = att
+                        
+                        archivedAttachments = archivedAttachments + 1
+                    Else
+                        Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
+                    End If
                 Else
-                    Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ") -> DATEI EXISTIERT BEREITS"
+                    Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ")"
                 End If
-            Else
-                Debug.Print "  Überspringe Anhang: " & att.fileName & " (Größe=" & att.Size & ")"
             End If
             counter = counter + 1
         Next att
         
         If (del And archivedAttachments > 0) Then
             Dim msgUpdate As String
-            Dim startIndex As Integer
-            Dim endIndex As Integer
+            Dim startIndex As Long
+            Dim endIndex As Long
             Dim htmlTag As String
-            Dim maxLength As Integer
+            Dim maxLength As Long
             
             ' Löschen der Attachments darf erst ganz am Schluss erfolgen
             ' Sonst zerhaut man sich die Schleife
@@ -528,15 +543,31 @@ Public Function GetKuerzel(mailAdress As String) As String
 End Function
 
 '--------------------------------------------------
+' Finde zugehoerigen Exchange User
+'--------------------------------------------------
+Public Function ResolveExchangeUser(addressEntry As addressEntry) As ExchangeUser
+    If Not (addressEntry.GetExchangeUser Is Nothing) Then
+        Set ResolveExchangeUser = addressEntry.GetExchangeUser
+    Else
+        ' Try to resolve Exchange User
+        Set olNS = Application.GetNamespace("MAPI")
+        Set olRecip = olNS.CreateRecipient(addressEntry.address)
+        olRecip.Resolve
+        Set ResolveExchangeUser = olRecip.addressEntry.GetExchangeUser
+    End If
+End Function
+
+'--------------------------------------------------
 ' Extrahiere die Adresse aus einem Adress-Eintrag
 ' Wird benötigt, da das Vorgehen für Exchange-Nutzer anders ist
 ' als für externe Kontakte
 '--------------------------------------------------
 Public Function GetAddress(addressEntry As addressEntry) As String
-    If (addressEntry.GetExchangeUser Is Nothing) Then
-        GetAddress = addressEntry.address
+    Set exchUser = ResolveExchangeUser(addressEntry)
+    If Not (exchUser Is Nothing) Then
+        GetAddress = exchUser.PrimarySmtpAddress
     Else
-        GetAddress = addressEntry.GetExchangeUser.PrimarySmtpAddress
+        GetAddress = addressEntry.address
     End If
 End Function
 
@@ -546,12 +577,14 @@ End Function
 ' als für externe Kontakte
 '--------------------------------------------------
 Public Function GetName(addressEntry As addressEntry) As String
-    If (addressEntry.GetExchangeUser Is Nothing) Then
-        GetName = addressEntry.name
+    Set exchUser = ResolveExchangeUser(addressEntry)
+    If Not (exchUser Is Nothing) Then
+        GetName = exchUser.name
     Else
-        GetName = addressEntry.GetExchangeUser.name
+        GetName = addressEntry.name
     End If
 End Function
+
 
 '--------------------------------------------------
 ' Zeige den Zusammenfassungsdialog
